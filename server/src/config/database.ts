@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
 import { env } from './env';
 import { logger } from '../utils/logger';
-import { ensurePersistentDatabase, shutdownPersistentMongo } from './persistentMongo';
-
 export async function connectDatabase(): Promise<void> {
   try {
     mongoose.set('strictQuery', true);
 
     if (env.MONGODB_URI.includes(':27018')) {
+      const { ensurePersistentDatabase } = await import('./persistentMongo');
       await ensurePersistentDatabase(27018);
     }
 
@@ -36,7 +35,10 @@ export async function disconnectDatabase(): Promise<void> {
   try {
     await mongoose.disconnect();
     logger.info('MongoDB connection cleanly closed.');
-    await shutdownPersistentMongo(27018);
+    if (env.MONGODB_URI.includes(':27018')) {
+      const { shutdownPersistentMongo } = await import('./persistentMongo');
+      await shutdownPersistentMongo(27018);
+    }
   } catch (error) {
     logger.error('Error during MongoDB disconnect:', error);
   }
