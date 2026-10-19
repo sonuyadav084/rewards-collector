@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # MongoDB Database Service
+  # ============================================================================
+  mongodb:
+    image: mongo:7.0-jammy
+    container_name: coupon-system-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: coupon_verification_db
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================================
+  # Node.js + Express Backend REST API
+  # ============================================================================
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: coupon-system-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://mongodb:27017/coupon_verification_db
+      JWT_SECRET: ${JWT_SECRET:-production_secure_jwt_secret_key_minimum_32_characters_long_12345}
+      JWT_EXPIRES_IN: 24h
+      CUSTOMER_SESSION_EXPIRES_IN: 2h
+      COOKIE_SECRET: ${COOKIE_SECRET:-production_secure_cookie_secret_long_string_12345}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8085,http://localhost:5185}
+      UPLOAD_DIR: /app/uploads/coupons
+      MAX_UPLOAD_SIZE_BYTES: 5242880
+      ENABLE_DEV_OTP: "false"
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_PHONE: ${TWILIO_FROM_PHONE:-}
+    volumes:
+      - coupon-uploads:/app/uploads/coupons
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ============================================================================
+  # React + Vite + Nginx Frontend
+  # ============================================================================
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: coupon-system-frontend
+    restart: unless-stopped
+    ports:
+      - "${PORT_HTTP:-8085}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# ==============================================================================
+# Persistent Named Volumes
+# ==============================================================================
+volumes:
+  mongo-data:
+    name: coupon-system-mongo-data
+  coupon-uploads:
+    name: coupon-system-uploads
+
+# ==============================================================================
+# Isolated Internal Network
+# ==============================================================================
+networks:
+  app-network:
+    name: coupon-system-network
+    driver: bridge
+
