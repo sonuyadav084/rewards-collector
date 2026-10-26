@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
-import { Shield, Lock, Mail, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -10,6 +10,7 @@ export const AdminLoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,11 +28,6 @@ export const AdminLoginPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickDemoFill = () => {
-    setEmail('thenationpride@admin');
-    setPassword('Admin@123456');
   };
 
   return (
@@ -87,13 +83,25 @@ export const AdminLoginPage: React.FC = () => {
                 <Lock className="w-4 h-4" />
               </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium shadow-xs"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium shadow-xs"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
 
@@ -112,21 +120,6 @@ export const AdminLoginPage: React.FC = () => {
             )}
           </button>
         </form>
-
-        {/* Quick Demo Credentials Helper */}
-        <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
-            Quick Test Account
-          </span>
-          <button
-            type="button"
-            onClick={handleQuickDemoFill}
-            className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline px-2 py-1 rounded bg-indigo-50"
-          >
-            Auto-Fill Credentials
-          </button>
-        </div>
       </div>
     </div>
   );
